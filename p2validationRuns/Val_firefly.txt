@@ -29,8 +29,8 @@ TRACE FILE:            canneal.04t.longTrace
 03. number of writes:                             12383
 04. number of write misses:                       2
 05. total miss rate:                              0.050722
-06. number of writebacks:                         13
-07. number of memory transactions:                3484
+06. number of writebacks:                         12
+07. number of memory transactions:                3483
 08. number of cache to cache transfers:           4873
 ===== Simulation results (Cache_3)      =====
 01. number of reads:                              113428
