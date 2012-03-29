@@ -134,7 +134,6 @@ public:
 
     void writeBack(ulong) {
         writeBacks++;
-        memoryTransactions++;
     }
     
     void Access(ulong, uchar, std::vector<Cache*> &);

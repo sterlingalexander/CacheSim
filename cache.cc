@@ -150,7 +150,7 @@ bool Cache::busRd(ulong addr) {
             return true;
         } else if (line->getFlags() == MODIFIED || line->getFlags() == SHARED_MODIFIED) {
             line->setFlags(SHARED_MODIFIED);
-            writeBack(addr);
+            memoryTransactions++;
             return true;
         } else { // SHARED_CLEAN don't care
             return false;
@@ -225,7 +225,7 @@ cacheLine *Cache::fillLine(ulong addr) {
 
     cacheLine *victim = findLineToReplace(addr);
     assert(victim != 0);
-    if (victim->getFlags() == DIRTY) {
+    if (victim->getFlags() == MODIFIED || victim->getFlags() == SHARED_MODIFIED) {
         writeBack(addr);
     }
     
