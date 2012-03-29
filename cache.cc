@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <vector>
 #include "cache.h"
 using namespace std;
 
@@ -16,7 +17,8 @@ Cache::Cache(int s, int a, int b) {
 
     reads = readMisses = writes = 0;
     writeMisses = writeBacks = currentCycle = 0;
-
+    memoryTransactions = cacheToCacheTransfers = 0;
+    
     size = (ulong) (s);
     assoc = (ulong) (a);
     lineSize = (ulong) (b);
@@ -49,7 +51,7 @@ Cache::Cache(int s, int a, int b) {
 /**you might add other parameters to Access()
 since this function is an entry point 
 to the memory hierarchy (i.e. caches)**/
-void Cache::Access(ulong addr, uchar op) {
+void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
     currentCycle++; /*per cache global counter to maintain LRU order 
 			among cache ways, updated on every cache access*/
 
@@ -60,23 +62,99 @@ void Cache::Access(ulong addr, uchar op) {
     }
 
     cacheLine *line = findLine(addr);
+    bool snoop;
     if (line == NULL) { /*miss*/
-        if (op == 'w') {
-            writeMisses++;
-        } else {
-            readMisses++;
-        }
-
         cacheLine *newline = fillLine(addr);
+        
         if (op == 'w') {
-            newline->setFlags(DIRTY);
+            snoop = busRd(addr, cachesArray);
+            if (snoop) {
+                busUpd(addr, cachesArray);
+                newline->setFlags(SHARED_MODIFIED);
+            } else {
+                newline->setFlags(MODIFIED); 
+            }
+            writeMisses++;            
+        } else {
+            snoop = busRd(addr, cachesArray);
+            if (snoop) {
+                newline->setFlags(SHARED_CLEAN);
+                memoryTransactions++;
+            } else {  
+                newline->setFlags(EXCLUSIVE);
+                cacheToCacheTransfers++;
+            } 
+            readMisses++;
         }
     } else {
         /**since it's a hit, update LRU and update dirty flag**/
         updateLRU(line);
+        
         if (op == 'w') {
-            line->setFlags(DIRTY);
+            if (line->getFlags() == EXCLUSIVE) {
+                line->setFlags(MODIFIED);
+            } else if (line->getFlags() != MODIFIED) {
+                snoop = busUpd(addr, cachesArray);
+                if (snoop) {
+                    line->setFlags(SHARED_MODIFIED);
+                } else {
+                    line->setFlags(MODIFIED);
+                }
+            }
         }
+    }
+}
+
+bool Cache::busUpd(ulong addr, std::vector<Cache*> &cachesArray) {
+    bool snoop;
+    
+    for (unsigned int i = 0; i < cachesArray.size(); i++) {
+        snoop = cachesArray[i]->busUpd(addr) || snoop;
+    }
+    
+    return snoop;
+}
+
+bool Cache::busRd(ulong addr, std::vector<Cache*> &cachesArray) {
+    bool snoop;
+    
+    for (unsigned int i = 0; i < cachesArray.size(); i++) {
+        snoop = cachesArray[i]->busRd(addr) || snoop;
+    }
+    
+    return snoop;
+}
+
+bool Cache::busUpd(ulong addr) {
+    cacheLine *line = findLine(addr);
+    if (line == NULL) {
+        return false;
+    } else {
+        if (line->getFlags() == SHARED_CLEAN || line->getFlags() == SHARED_MODIFIED) {
+            line->setFlags(SHARED_CLEAN);
+            return true;
+        } else { // EXLUSIVE and MODIFIED don't care.
+            return false;
+        }
+    }    
+}
+
+bool Cache::busRd(ulong addr) {
+    cacheLine *line = findLine(addr);
+    
+    if (line == NULL) {
+        return false;
+    } else {
+        if (line->getFlags() == EXCLUSIVE) {
+            line->setFlags(SHARED_CLEAN);
+            return true;
+        } else if (line->getFlags() == MODIFIED || line->getFlags() == SHARED_MODIFIED) {
+            line->setFlags(SHARED_MODIFIED);
+            writeBack(addr);
+            return true;
+        } else { // SHARED_CLEAN don't care
+            return false;
+        }        
     }
 }
 
@@ -172,7 +250,7 @@ void Cache::printStats() {
     printf("04. number of write misses:                       %li\n", writeMisses);
     printf("05. total miss rate:                              %f\n", (writeMisses + readMisses + 0.0) / (reads + writes));
     printf("06. number of writebacks:                         %li\n", writeBacks);
-    printf("07. number of memory transactions:                %i\n", 3283);
-    printf("08. number of cache to cache transfers:           %i\n", 4824);
+    printf("07. number of memory transactions:                %li\n", memoryTransactions);
+    printf("08. number of cache to cache transfers:           %li\n", cacheToCacheTransfers);
 }      
        

@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 typedef unsigned long ulong;
 typedef unsigned char uchar;
@@ -19,7 +20,11 @@ typedef unsigned int uint;
 enum {
     INVALID = 0,
     VALID,
-    DIRTY
+    DIRTY,
+    EXCLUSIVE,
+    SHARED_CLEAN,
+    SHARED_MODIFIED,
+    MODIFIED
 };
 
 class cacheLine {
@@ -73,6 +78,7 @@ class Cache {
 protected:
     ulong size, lineSize, assoc, sets, log2Sets, log2Blk, tagMask, numLines;
     ulong reads, readMisses, writes, writeMisses, writeBacks;
+    ulong memoryTransactions, cacheToCacheTransfers;
 
     //******///
     //add coherence counters here///
@@ -103,8 +109,8 @@ public:
 
     cacheLine *findLineToReplace(ulong addr);
     cacheLine *fillLine(ulong addr);
-    cacheLine * findLine(ulong addr);
-    cacheLine * getLRU(ulong);
+    cacheLine *findLine(ulong addr);
+    cacheLine *getLRU(ulong);
 
     ulong getRM() {
         return readMisses;
@@ -128,16 +134,22 @@ public:
 
     void writeBack(ulong) {
         writeBacks++;
+        memoryTransactions++;
     }
     
-    void Access(ulong, uchar);
+    void Access(ulong, uchar, std::vector<Cache*> &);
     void printStats();
     void updateLRU(cacheLine *);
 
     //******///
     //add other functions to handle bus transactions///
     //******///
-
+    
+    bool busUpd(ulong, std::vector<Cache*> &);
+    bool busRd(ulong, std::vector<Cache*> &);
+    bool busUpd(ulong);
+    bool busRd(ulong);
+    
 };
 
 #endif

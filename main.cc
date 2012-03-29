@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <fstream>
+#include <iostream>
 #include <vector>
 #include <cstring>
 
@@ -102,7 +103,7 @@ int main(int argc, char *argv[]) {
     ulong address;
     
     while (fscanf(pFile, "%i %c %lx", &processor_number, &op, &address) == 3) {
-        cachesArray[processor_number]->Access(address, op);
+        cachesArray[processor_number]->Access(address, op, cachesArray);
     }
     
     
