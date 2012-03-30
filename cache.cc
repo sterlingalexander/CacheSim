@@ -71,18 +71,20 @@ void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
             if (snoop) {
                 busUpd(addr, cachesArray);
                 newline->setFlags(SHARED_MODIFIED);
+                cacheToCacheTransfers++;
             } else {
-                newline->setFlags(MODIFIED); 
+                newline->setFlags(MODIFIED);
+                memoryTransactions++;
             }
             writeMisses++;            
         } else {
             snoop = busRd(addr, cachesArray);
             if (snoop) {
                 newline->setFlags(SHARED_CLEAN);
-                memoryTransactions++;
+                cacheToCacheTransfers++;
             } else {  
                 newline->setFlags(EXCLUSIVE);
-                cacheToCacheTransfers++;
+                memoryTransactions++;
             } 
             readMisses++;
         }
@@ -150,9 +152,10 @@ bool Cache::busRd(ulong addr) {
             return true;
         } else if (line->getFlags() == MODIFIED || line->getFlags() == SHARED_MODIFIED) {
             line->setFlags(SHARED_MODIFIED);
-            memoryTransactions++;
             return true;
-        } else { // SHARED_CLEAN don't care
+        } else if (line->getFlags() == SHARED_CLEAN) {
+            return true;
+        } else {
             return false;
         }        
     }
