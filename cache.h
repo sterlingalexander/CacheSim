@@ -19,18 +19,16 @@ typedef unsigned int uint;
 /****add new states, based on the protocol****/
 enum {
     INVALID = 0,
-    VALID,
-    DIRTY,
-    EXCLUSIVE,
-    SHARED_CLEAN,
+    EXCLUSIVE, // Also VALID-EXCLUSIVE
+    SHARED_CLEAN, // Also SHARED
     SHARED_MODIFIED,
-    MODIFIED
+    MODIFIED // Also DIRTY
 };
 
 class cacheLine {
 protected:
     ulong tag;
-    ulong Flags; // 0:invalid, 1:valid, 2:dirty 
+    ulong Flags; // 0:invalid, 1:exclusive, 2:shared_clean, 3:shared_modified, 4:modified 
     ulong seq;
 
 public:
