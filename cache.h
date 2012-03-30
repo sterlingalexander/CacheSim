@@ -19,7 +19,6 @@ typedef unsigned int uint;
 /****add new states, based on the protocol****/
 enum {
     INVALID = 0,
-    VALID,
     EXCLUSIVE, // Also VALID-EXCLUSIVE
     SHARED_CLEAN, // Also SHARED
     SHARED_MODIFIED,

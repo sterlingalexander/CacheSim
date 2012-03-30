@@ -64,14 +64,18 @@ void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
 
     cacheLine *line = findLine(addr);
     bool snoop;
-    if (line == NULL) { /*miss*/
+    if (line == NULL || line->getFlags() == INVALID) { /*miss*/
         cacheLine *newline = fillLine(addr);
         
         if (op == 'w') {
             snoop = busRd(addr, cachesArray);
             if (snoop) {
                 busUpd(addr, cachesArray);
-                newline->setFlags(SHARED_MODIFIED);
+                if (protocol == 0) {
+                    newline->setFlags(SHARED_CLEAN);
+                } else {
+                    newline->setFlags(SHARED_MODIFIED);
+                }
                 cacheToCacheTransfers++;
             } else {
                 newline->setFlags(MODIFIED);
@@ -96,13 +100,28 @@ void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
         if (op == 'w') {
             if (line->getFlags() == EXCLUSIVE) {
                 line->setFlags(MODIFIED);
-            } else if (line->getFlags() != MODIFIED) {
-                snoop = busUpd(addr, cachesArray);
-                if (snoop) {
-                    line->setFlags(SHARED_MODIFIED);
-                } else {
-                    line->setFlags(MODIFIED);
+                if (protocol == 0) {
+                    memoryTransactions++;
                 }
+            } else if (line->getFlags() != MODIFIED) {
+                if (protocol == 0) {
+                    line->setFlags(INVALID);
+                    snoop = busUpd(addr, cachesArray);
+                    if (snoop) {
+                        line->setFlags(SHARED_CLEAN);
+                        memoryTransactions++;
+                    } else {
+                        line->setFlags(EXCLUSIVE);
+                    }
+                } else {
+                    line->setFlags(INVALID);
+                    snoop = busUpd(addr, cachesArray);
+                    if (snoop) {
+                        line->setFlags(SHARED_MODIFIED);
+                    } else {
+                        line->setFlags(MODIFIED);
+                    }    
+                }                
             }
         }
     }
@@ -130,14 +149,19 @@ bool Cache::busRd(ulong addr, std::vector<Cache*> &cachesArray) {
 
 bool Cache::busUpd(ulong addr) {
     cacheLine *line = findLine(addr);
-    if (line == NULL) {
+    if (line == NULL || line->getFlags() == INVALID) {
         return false;
     } else {
-        if (line->getFlags() == SHARED_CLEAN || line->getFlags() == SHARED_MODIFIED) {
+        if (protocol == 0) {
             line->setFlags(SHARED_CLEAN);
             return true;
-        } else { // EXLUSIVE and MODIFIED don't care.
-            return false;
+        } else {
+            if (line->getFlags() == SHARED_CLEAN || line->getFlags() == SHARED_MODIFIED) {
+                line->setFlags(SHARED_CLEAN);
+                return true;
+            } else { // EXLUSIVE and MODIFIED don't care.
+                return false;
+            }
         }
     }    
 }
@@ -145,20 +169,21 @@ bool Cache::busUpd(ulong addr) {
 bool Cache::busRd(ulong addr) {
     cacheLine *line = findLine(addr);
     
-    if (line == NULL) {
+    if (line == NULL || line->getFlags() == INVALID) {
         return false;
     } else {
-        if (line->getFlags() == EXCLUSIVE) {
+        if (protocol == 0) {
             line->setFlags(SHARED_CLEAN);
             return true;
-        } else if (line->getFlags() == MODIFIED || line->getFlags() == SHARED_MODIFIED) {
-            line->setFlags(SHARED_MODIFIED);
-            return true;
-        } else if (line->getFlags() == SHARED_CLEAN) {
-            return true;
         } else {
-            return false;
-        }        
+            if (line->getFlags() == EXCLUSIVE || line->getFlags() == SHARED_CLEAN) {
+                line->setFlags(SHARED_CLEAN);
+                return true;
+            } else {
+                line->setFlags(SHARED_MODIFIED);
+                return true;
+            } 
+        }
     }
 }
 
@@ -235,7 +260,7 @@ cacheLine *Cache::fillLine(ulong addr) {
     
     tag = calcTag(addr);
     victim->setTag(tag);
-    victim->setFlags(VALID);
+    victim->setFlags(INVALID);
     /**note that this cache line has been already 
        upgraded to MRU in the previous function (findLineToReplace)**/
     
