@@ -18,7 +18,7 @@ Cache::Cache(int s, int a, int b, int p) {
     reads = readMisses = writes = 0;
     writeMisses = writeBacks = currentCycle = 0;
     memoryTransactions = cacheToCacheTransfers = 0;
-    
+
     size = (ulong) (s);
     assoc = (ulong) (a);
     lineSize = (ulong) (b);
@@ -50,10 +50,10 @@ Cache::Cache(int s, int a, int b, int p) {
 }
 
 /**you might add other parameters to Access()
-since this function is an entry point 
+since this function is an entry point
 to the memory hierarchy (i.e. caches)**/
 void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
-    currentCycle++; /*per cache global counter to maintain LRU order 
+    currentCycle++; /*per cache global counter to maintain LRU order
 			among cache ways, updated on every cache access*/
 
     if (op == 'w') {
@@ -63,10 +63,10 @@ void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
     }
 
     cacheLine *line = findLine(addr);
-    bool snoop;
+    bool snoop = false;
     if (line == NULL || line->getFlags() == INVALID) { /*miss*/
         cacheLine *newline = fillLine(addr);
-        
+
         if (op == 'w') {
             snoop = busRd(addr, cachesArray);
             if (snoop) {
@@ -81,22 +81,22 @@ void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
                 newline->setFlags(MODIFIED);
                 memoryTransactions++;
             }
-            writeMisses++;            
+            writeMisses++;
         } else {
             snoop = busRd(addr, cachesArray);
             if (snoop) {
                 newline->setFlags(SHARED_CLEAN);
                 cacheToCacheTransfers++;
-            } else {  
+            } else {
                 newline->setFlags(EXCLUSIVE);
                 memoryTransactions++;
-            } 
+            }
             readMisses++;
         }
     } else {
         /**since it's a hit, update LRU and update dirty flag**/
         updateLRU(line);
-        
+
         if (op == 'w') {
             if (line->getFlags() == EXCLUSIVE) {
                 line->setFlags(MODIFIED);
@@ -120,30 +120,30 @@ void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
                         line->setFlags(SHARED_MODIFIED);
                     } else {
                         line->setFlags(MODIFIED);
-                    }    
-                }                
+                    }
+                }
             }
         }
     }
 }
 
 bool Cache::busUpd(ulong addr, std::vector<Cache*> &cachesArray) {
-    bool snoop;
-    
+    bool snoop = false;
+
     for (unsigned int i = 0; i < cachesArray.size(); i++) {
         snoop = cachesArray[i]->busUpd(addr) || snoop;
     }
-    
+
     return snoop;
 }
 
 bool Cache::busRd(ulong addr, std::vector<Cache*> &cachesArray) {
-    bool snoop;
-    
+    bool snoop = false;
+
     for (unsigned int i = 0; i < cachesArray.size(); i++) {
         snoop = cachesArray[i]->busRd(addr) || snoop;
     }
-    
+
     return snoop;
 }
 
@@ -163,12 +163,12 @@ bool Cache::busUpd(ulong addr) {
                 return false;
             }
         }
-    }    
+    }
 }
 
 bool Cache::busRd(ulong addr) {
     cacheLine *line = findLine(addr);
-    
+
     if (line == NULL || line->getFlags() == INVALID) {
         return false;
     } else {
@@ -182,7 +182,7 @@ bool Cache::busRd(ulong addr) {
             } else {
                 line->setFlags(SHARED_MODIFIED);
                 return true;
-            } 
+            }
         }
     }
 }
@@ -203,7 +203,7 @@ cacheLine *Cache::findLine(ulong addr) {
             }
         }
     }
-    
+
     if (pos == assoc) {
         return NULL;
     } else {
@@ -227,14 +227,14 @@ cacheLine * Cache::getLRU(ulong addr) {
     for (j = 0; j < assoc; j++) {
         if (cache[i][j].isValid() == 0) return &(cache[i][j]);
     }
-    
+
     for (j = 0; j < assoc; j++) {
         if (cache[i][j].getSeq() <= min) {
             victim = j;
             min = cache[i][j].getSeq();
         }
     }
-    
+
     assert(victim != assoc);
 
     return &(cache[i][victim]);
@@ -257,22 +257,22 @@ cacheLine *Cache::fillLine(ulong addr) {
     if (victim->getFlags() == MODIFIED || victim->getFlags() == SHARED_MODIFIED) {
         writeBack(addr);
     }
-    
+
     tag = calcTag(addr);
     victim->setTag(tag);
     victim->setFlags(INVALID);
-    /**note that this cache line has been already 
+    /**note that this cache line has been already
        upgraded to MRU in the previous function (findLineToReplace)**/
-    
+
     return victim;
 }
 
 void Cache::printStats() {
-    
+
     //printf("===== Simulation results      =====\n");
     /****print out the rest of statistics here.****/
     /****follow the ouput file format**************/
-    
+
     printf("01. number of reads:                              %li\n", reads);
     printf("02. number of read misses:                        %li\n", readMisses);
     printf("03. number of writes:                             %li\n", writes);
@@ -281,5 +281,4 @@ void Cache::printStats() {
     printf("06. number of writebacks:                         %li\n", writeBacks);
     printf("07. number of memory transactions:                %li\n", memoryTransactions);
     printf("08. number of cache to cache transfers:           %li\n", cacheToCacheTransfers);
-}      
-       
+}
