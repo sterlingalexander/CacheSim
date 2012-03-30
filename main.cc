@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     vector<Cache*> cachesArray;
     
     for (int i = 0; i < num_processors; i++) {
-        cachesArray.push_back(new Cache(cache_size, cache_assoc, blk_size));
+        cachesArray.push_back(new Cache(cache_size, cache_assoc, blk_size, protocol));
     }
     
     pFile = fopen(fname, "r");

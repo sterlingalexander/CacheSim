@@ -12,7 +12,7 @@
 #include "cache.h"
 using namespace std;
 
-Cache::Cache(int s, int a, int b) {
+Cache::Cache(int s, int a, int b, int p) {
     ulong i, j;
 
     reads = readMisses = writes = 0;
@@ -26,6 +26,7 @@ Cache::Cache(int s, int a, int b) {
     numLines = (ulong) (s / b);
     log2Sets = (ulong) (log2(sets));
     log2Blk = (ulong) (log2(b));
+    protocol = (ulong) (p);
 
     //*******************//
     //initialize your counters here//
