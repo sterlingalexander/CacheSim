@@ -73,6 +73,7 @@ void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
                 busUpd(addr, cachesArray);
                 if (protocol == 0) {
                     newline->setFlags(SHARED_CLEAN);
+                    memoryTransactions++;
                 } else {
                     newline->setFlags(SHARED_MODIFIED);
                 }
@@ -100,19 +101,16 @@ void Cache::Access(ulong addr, uchar op, vector<Cache*> &cachesArray) {
         if (op == 'w') {
             if (line->getFlags() == EXCLUSIVE) {
                 line->setFlags(MODIFIED);
-                if (protocol == 0) {
-                    memoryTransactions++;
-                }
             } else if (line->getFlags() != MODIFIED) {
                 if (protocol == 0) {
                     line->setFlags(INVALID);
                     snoop = busUpd(addr, cachesArray);
                     if (snoop) {
                         line->setFlags(SHARED_CLEAN);
-                        memoryTransactions++;
                     } else {
                         line->setFlags(EXCLUSIVE);
                     }
+                    memoryTransactions++;
                 } else {
                     line->setFlags(INVALID);
                     snoop = busUpd(addr, cachesArray);
@@ -153,6 +151,9 @@ bool Cache::busUpd(ulong addr) {
         return false;
     } else {
         if (protocol == 0) {
+            if (line->getFlags() == MODIFIED) {
+                memoryTransactions++;
+            }
             line->setFlags(SHARED_CLEAN);
             return true;
         } else {
@@ -173,6 +174,9 @@ bool Cache::busRd(ulong addr) {
         return false;
     } else {
         if (protocol == 0) {
+            if (line->getFlags() == MODIFIED) {
+                memoryTransactions++;
+            }
             line->setFlags(SHARED_CLEAN);
             return true;
         } else {
